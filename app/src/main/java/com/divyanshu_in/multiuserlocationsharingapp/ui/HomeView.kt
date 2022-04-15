@@ -29,12 +29,13 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.*
 import timber.log.Timber
+import java.util.*
 
 
 val permissionList = arrayListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -47,7 +48,6 @@ fun HomeView(context: Context, viewModel: MainViewModel) {
     val permissionState = rememberMultiplePermissionsState(permissions = permissionList)
 
     LaunchedEffect(key1 = permissionState.allPermissionsGranted){
-
         if(!permissionState.allPermissionsGranted){
             permissionState.launchMultiplePermissionRequest()
         }
@@ -59,7 +59,7 @@ fun HomeView(context: Context, viewModel: MainViewModel) {
     var isNavigatedToUserLoc by remember{ mutableStateOf(false) }
 
     val cameraPositionState = rememberCameraPositionState{
-        position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 200f)
+        position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 20f)
     }
 
     if(permissionState.allPermissionsGranted){
@@ -84,6 +84,11 @@ fun HomeView(context: Context, viewModel: MainViewModel) {
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             properties = MapProperties(isMyLocationEnabled = permissionState.allPermissionsGranted)){
+
+            viewModel.stateOfMarkerPositions.forEach { userLocObject ->
+                Marker(position = userLocObject.value.latLng, title = userLocObject.key, icon = BitmapDescriptorFactory.defaultMarker(userLocObject.value.colorHue))
+            }
+            
         }
 
         when(viewModel.actionState){

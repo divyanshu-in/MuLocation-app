@@ -6,10 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.divyanshu_in.multiuserlocationsharingapp.Constants
 import com.divyanshu_in.multiuserlocationsharingapp.data.MessageBody
+import com.divyanshu_in.multiuserlocationsharingapp.data.MessageType
 import com.divyanshu_in.multiuserlocationsharingapp.data.getUsername
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.launch
-import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.java_websocket.client.WebSocketClient
@@ -26,8 +27,9 @@ class MainViewModel(): ViewModel(){
     private var isConnected = false
     var linkToServerState by mutableStateOf("")
 
-    fun generateServerLinkAndConnect(context: Context){
+    var stateOfMarkerPositions by mutableStateOf(mapOf<String, LocationData>())
 
+    fun generateServerLinkAndConnect(context: Context){
         viewModelScope.launch {
             context.getUsername.collect{
                 userName = it.toString()
@@ -38,17 +40,31 @@ class MainViewModel(): ViewModel(){
     }
 
     private fun connectToWebSocket(serverUrl: String){
+        val rnd = Random()
         if(!::webSocketClient.isInitialized){
 
             webSocketClient = object: WebSocketClientImpl(URI(serverUrl)){
                 override fun onOpen(handshakedata: ServerHandshake?) {
                     super.onOpen(handshakedata)
                     Timber.e("connection opened!")
+                    webSocketClient.send(MessageBody(username = userName, msg_type = MessageType.GENERAL_MSG).parseToJsonString())
                     isConnected = true
                 }
 
                 override fun onMessage(message: String?) {
                     super.onMessage(message)
+                    val messageBody = message?.parseToMessageBody()
+                    if (messageBody?.msg_type == MessageType.LOCATION_MSG){
+                        val newMap = stateOfMarkerPositions.toMutableMap()
+                        var hue = newMap[messageBody.username.toString()]?.colorHue
+
+                        if(hue == null)
+                            hue = rnd.nextInt(360).toFloat()
+
+                        newMap[messageBody.username.toString()] = LocationData(LatLng(messageBody.lat!!, messageBody.long!!), hue)
+                        stateOfMarkerPositions = newMap
+                    }
+
                     Timber.e(message)
                 }
 
@@ -64,25 +80,28 @@ class MainViewModel(): ViewModel(){
                 }
             }
             webSocketClient.connect()
-
         }
     }
 
     fun sendLocation(latLng: LatLng){
         if(isConnected){
             val messageBodyObject = MessageBody(latLng.latitude, latLng.longitude, this@MainViewModel.userName)
-            webSocketClient.send(Json.encodeToString(messageBodyObject))
+            webSocketClient.send(messageBodyObject.parseToJsonString())
         }
     }
 
+    fun MessageBody.parseToJsonString() = Json.encodeToString(this)
+
+    fun String.parseToMessageBody() = Json.decodeFromString<MessageBody>(this)
 }
+
+
 
 open class WebSocketClientImpl(uri: URI) : WebSocketClient(uri){
     override fun onOpen(handshakedata: ServerHandshake?) {
     }
 
     override fun onMessage(message: String?) {
-
     }
 
     override fun onClose(code: Int, reason: String?, remote: Boolean) {
@@ -92,3 +111,7 @@ open class WebSocketClientImpl(uri: URI) : WebSocketClient(uri){
     }
 
 }
+
+data class LocationData(
+    val latLng: LatLng, val colorHue: Float
+)
