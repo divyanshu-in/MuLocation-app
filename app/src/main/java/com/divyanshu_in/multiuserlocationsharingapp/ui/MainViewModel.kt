@@ -1,6 +1,7 @@
 package com.divyanshu_in.multiuserlocationsharingapp.ui
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,16 +17,20 @@ import kotlinx.serialization.json.Json
 import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
 import timber.log.Timber
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.lang.Exception
 import java.net.URI
 import java.util.*
 
 class MainViewModel(): ViewModel(){
     var actionState by mutableStateOf(ActionState.DEFAULT)
-    private lateinit var webSocketClient: WebSocketClientImpl
+    private lateinit var webSocketClient: WebSocketClient
     private lateinit var userName: String
     private var isConnected = false
     var linkToServerState by mutableStateOf("")
+    var sharableLinkState by mutableStateOf("")
 
     var stateOfMarkerPositions by mutableStateOf(mapOf<String, LocationData>())
 
@@ -33,26 +38,33 @@ class MainViewModel(): ViewModel(){
         viewModelScope.launch {
             context.getUsername.collect{
                 userName = it.toString()
-                linkToServerState = Constants.BASE_URL + it + "_${UUID.randomUUID()}"
+                val uuid = UUID.randomUUID()
+                linkToServerState = Constants.BASE_URL + it + "_${uuid}"
+                sharableLinkState = Constants.SHARABLE_URL + it + "_${uuid}"
                 connectToWebSocket(linkToServerState)
             }
         }
     }
 
+    fun joinWebSocketFromDeepLink(serverId: String){
+        linkToServerState = Constants.BASE_URL + serverId
+        connectToWebSocket(linkToServerState)
+    }
+
+
     private fun connectToWebSocket(serverUrl: String){
         val rnd = Random()
         if(!::webSocketClient.isInitialized){
 
-            webSocketClient = object: WebSocketClientImpl(URI(serverUrl)){
+            webSocketClient = object: WebSocketClient(URI(serverUrl)){
+
                 override fun onOpen(handshakedata: ServerHandshake?) {
-                    super.onOpen(handshakedata)
                     Timber.e("connection opened!")
                     webSocketClient.send(MessageBody(username = userName, msg_type = MessageType.GENERAL_MSG).parseToJsonString())
                     isConnected = true
                 }
 
                 override fun onMessage(message: String?) {
-                    super.onMessage(message)
                     val messageBody = message?.parseToMessageBody()
                     if (messageBody?.msg_type == MessageType.LOCATION_MSG){
                         val newMap = stateOfMarkerPositions.toMutableMap()
@@ -69,13 +81,11 @@ class MainViewModel(): ViewModel(){
                 }
 
                 override fun onClose(code: Int, reason: String?, remote: Boolean) {
-                    super.onClose(code, reason, remote)
                     isConnected = false
                     Timber.e("closed, $reason, $code, $remote")
                 }
 
                 override fun onError(ex: Exception?) {
-                    super.onError(ex)
                     ex?.printStackTrace()
                 }
             }
@@ -93,23 +103,6 @@ class MainViewModel(): ViewModel(){
     fun MessageBody.parseToJsonString() = Json.encodeToString(this)
 
     fun String.parseToMessageBody() = Json.decodeFromString<MessageBody>(this)
-}
-
-
-
-open class WebSocketClientImpl(uri: URI) : WebSocketClient(uri){
-    override fun onOpen(handshakedata: ServerHandshake?) {
-    }
-
-    override fun onMessage(message: String?) {
-    }
-
-    override fun onClose(code: Int, reason: String?, remote: Boolean) {
-    }
-
-    override fun onError(ex: Exception?) {
-    }
-
 }
 
 data class LocationData(

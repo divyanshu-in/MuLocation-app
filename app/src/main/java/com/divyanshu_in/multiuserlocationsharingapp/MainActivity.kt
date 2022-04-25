@@ -16,6 +16,7 @@ import com.divyanshu_in.multiuserlocationsharingapp.ui.SaveUsernameView
 import kotlinx.coroutines.launch
 import androidx.activity.viewModels
 import dagger.hilt.android.AndroidEntryPoint
+import timber.log.Timber
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -24,7 +25,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
 
 
         setContent {
@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
 
                 NavHost(navController = navController, startDestination = Destinations.HomeView.name) {
                     composable(Destinations.HomeView.name){
-                        HomeView(this@MainActivity, viewModel)
+                        HomeView(this@MainActivity, viewModel, intent.data?.pathSegments?.last())
                     }
                     composable(Destinations.SaveUsernameView.name){
                         SaveUsernameView(this@MainActivity, navController)

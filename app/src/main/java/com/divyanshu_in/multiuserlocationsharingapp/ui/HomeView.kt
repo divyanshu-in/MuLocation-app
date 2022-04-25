@@ -29,10 +29,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptor
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.*
 import com.google.maps.android.compose.*
 import timber.log.Timber
 import java.util.*
@@ -43,7 +40,11 @@ val permissionList = arrayListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manif
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun HomeView(context: Context, viewModel: MainViewModel) {
+fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?) {
+
+    serverId?.let {
+        viewModel.actionState = ActionState.SERVER_JOINED
+    }
 
     val permissionState = rememberMultiplePermissionsState(permissions = permissionList)
 
@@ -60,6 +61,16 @@ fun HomeView(context: Context, viewModel: MainViewModel) {
 
     val cameraPositionState = rememberCameraPositionState{
         position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 20f)
+    }
+
+    viewModel.stateOfMarkerPositions.entries.forEach {
+        if (cameraPositionState.projection?.visibleRegion?.latLngBounds?.contains(it.value.latLng) == false){
+            cameraPositionState.projection?.visibleRegion?.latLngBounds
+        }
+    }
+
+    fun getMarkerForOutOfBoundLocation(bounds: LatLngBounds, latLng: LatLng){
+        bounds
     }
 
     if(permissionState.allPermissionsGranted){
@@ -83,12 +94,13 @@ fun HomeView(context: Context, viewModel: MainViewModel) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            properties = MapProperties(isMyLocationEnabled = permissionState.allPermissionsGranted)){
+            properties = MapProperties(isMyLocationEnabled = permissionState.allPermissionsGranted)
+        ){
 
             viewModel.stateOfMarkerPositions.forEach { userLocObject ->
-                Marker(position = userLocObject.value.latLng, title = userLocObject.key, icon = BitmapDescriptorFactory.defaultMarker(userLocObject.value.colorHue))
+                val markerState = rememberMarkerState(position = userLocObject.value.latLng)
+                Marker(state = markerState , title = userLocObject.key, icon = BitmapDescriptorFactory.defaultMarker(userLocObject.value.colorHue))
             }
-            
         }
 
         when(viewModel.actionState){
@@ -99,6 +111,15 @@ fun HomeView(context: Context, viewModel: MainViewModel) {
 
             }
             ActionState.SERVER_JOINED -> {
+                if(permissionState.allPermissionsGranted){
+                    viewModel.joinWebSocketFromDeepLink(serverId!!)
+
+
+                }else{
+                    LaunchedEffect(key1 = true){
+                        permissionState.launchMultiplePermissionRequest()
+                    }
+                }
             }
             ActionState.SERVER_CREATED -> {
 
@@ -138,6 +159,8 @@ fun ButtonGroup(context: Context, modifier: Modifier, viewModel: MainViewModel){
             if(permissionState.allPermissionsGranted){
                 viewModel.generateServerLinkAndConnect(context)
                 viewModel.actionState = ActionState.SERVER_CREATED
+            }else{
+                permissionState.launchMultiplePermissionRequest()
             }
         }, shape = RoundedCornerShape(16.dp)){
             Text(text = "Create Server", modifier = Modifier.padding(16.dp, 8.dp, 16.dp, 8.dp))
@@ -151,7 +174,7 @@ fun GetLinkRow(context: Context, modifier: Modifier, viewModel: MainViewModel){
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Card(shape = RoundedCornerShape(8.dp)) {
 
-            Text(text = viewModel.linkToServerState, fontSize = 12.sp, modifier = Modifier
+            Text(text = viewModel.sharableLinkState, fontSize = 12.sp, modifier = Modifier
                 .padding(16.dp)
                 .selectable(selected = false, enabled = true, Role.Button, onClick = {}))
         }
@@ -160,7 +183,7 @@ fun GetLinkRow(context: Context, modifier: Modifier, viewModel: MainViewModel){
             Card(shape = CircleShape) {
 
                 IconButton(onClick = {
-                    context.shareLinkVia(viewModel.linkToServerState)
+                    context.shareLinkVia(viewModel.sharableLinkState)
                 }, modifier = Modifier.background(Color.White)){
                     Icon(
                         Icons.Rounded.Share,
@@ -171,7 +194,7 @@ fun GetLinkRow(context: Context, modifier: Modifier, viewModel: MainViewModel){
             Spacer(modifier = Modifier.width(16.dp))
             Card(shape = CircleShape) {
                 IconButton(onClick = {
-                    context.copyTextToClipBoard(viewModel.linkToServerState)
+                    context.copyTextToClipBoard(viewModel.sharableLinkState)
                 }){
                     Icon(
                         painterResource(R.drawable.ic_round_assignment),
