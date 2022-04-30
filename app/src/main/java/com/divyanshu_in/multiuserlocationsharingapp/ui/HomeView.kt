@@ -14,10 +14,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -31,8 +33,10 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.util.*
 
 
 val permissionList = arrayListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -63,14 +67,11 @@ fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?) {
         position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 20f)
     }
 
-    viewModel.stateOfMarkerPositions.entries.forEach {
-        if (cameraPositionState.projection?.visibleRegion?.latLngBounds?.contains(it.value.latLng) == false){
-            cameraPositionState.projection?.visibleRegion?.latLngBounds
-        }
-    }
+//    viewModel.getDirectionOfMarker(cameraPositionState)
 
-    fun getMarkerForOutOfBoundLocation(bounds: LatLngBounds, latLng: LatLng){
-        bounds
+    LaunchedEffect(key1 = cameraPositionState.position){
+        val visibleRegion = cameraPositionState.projection?.visibleRegion
+        viewModel.getDirectionOfMarker(visibleRegion)
     }
 
     if(permissionState.allPermissionsGranted){
@@ -91,15 +92,37 @@ fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?) {
 
 
     Box(modifier = Modifier.fillMaxSize()) {
+
+        
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            properties = MapProperties(isMyLocationEnabled = permissionState.allPermissionsGranted)
+            properties = MapProperties(isMyLocationEnabled = permissionState.allPermissionsGranted),
+            uiSettings = MapUiSettings(zoomControlsEnabled = false)
         ){
 
             viewModel.stateOfMarkerPositions.forEach { userLocObject ->
                 val markerState = rememberMarkerState(position = userLocObject.value.latLng)
                 Marker(state = markerState , title = userLocObject.key, icon = BitmapDescriptorFactory.defaultMarker(userLocObject.value.colorHue))
+            }
+        }
+
+        Column(modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(12.dp)) {
+            viewModel.stateOfNonMapMarkerPositions.forEach {
+                FloatingActionButton(
+                    onClick = { },
+                    backgroundColor = Color
+                        .hsv(
+                            viewModel.stateOfMarkerPositions[it.key]?.colorHue!!,
+                            1f,
+                            1f),
+                    modifier = Modifier.rotate((it.value*180/Math.PI).toFloat() + 270)
+                ) {
+                    Timber.e(it.toString())
+                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "")
+                }
             }
         }
 
