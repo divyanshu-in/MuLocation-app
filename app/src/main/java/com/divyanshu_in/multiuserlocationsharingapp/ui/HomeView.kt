@@ -2,10 +2,7 @@ package com.divyanshu_in.multiuserlocationsharingapp.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,22 +18,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.divyanshu_in.multiuserlocationsharingapp.R
+import com.divyanshu_in.multiuserlocationsharingapp.data.ActionState
+import com.divyanshu_in.multiuserlocationsharingapp.utils.copyTextToClipBoard
+import com.divyanshu_in.multiuserlocationsharingapp.utils.shareLinkVia
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.*
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import timber.log.Timber
 
 
 val permissionList = arrayListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -58,37 +56,27 @@ fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?) {
         }
     }
 
-    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-
-    var locOfUser by remember{ mutableStateOf(LatLng(0.0, 0.0)) }
-    var isNavigatedToUserLoc by remember{ mutableStateOf(false) }
-
     val cameraPositionState = rememberCameraPositionState{
         position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 20f)
     }
-
-//    viewModel.getDirectionOfMarker(cameraPositionState)
 
     LaunchedEffect(key1 = cameraPositionState.position){
         val visibleRegion = cameraPositionState.projection?.visibleRegion
         viewModel.getDirectionOfMarker(visibleRegion)
     }
 
-    if(permissionState.allPermissionsGranted){
-        fusedLocationClient.lastLocation.addOnSuccessListener {
-            it?.let {
-                Timber.e("lastLoc")
-                if (!isNavigatedToUserLoc){
-                    locOfUser = LatLng(it.latitude, it.longitude)
-                    viewModel.sendLocation(locOfUser)
-                    cameraPositionState.move(CameraUpdateFactory.newLatLng(locOfUser))
-                    isNavigatedToUserLoc = true
-                }
-            }
-        }
-    }else{
-        Toast.makeText(context, "Grant All Permissions First!", Toast.LENGTH_SHORT).show()
+    LaunchedEffect(key1 = viewModel.userLocationState){
+        cameraPositionState.move(CameraUpdateFactory.newLatLng(viewModel.userLocationState))
     }
+
+    LaunchedEffect(key1 = permissionState.allPermissionsGranted){
+        if(permissionState.allPermissionsGranted){
+            viewModel.addLocationChangeListener(context)
+        }else{
+            Toast.makeText(context, "Grant All Permissions First!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -110,19 +98,17 @@ fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?) {
         Column(modifier = Modifier
             .align(Alignment.BottomEnd)
             .padding(12.dp)) {
-            viewModel.stateOfNonMapMarkerPositions.forEach {
+            viewModel.stateOfMarkerPositions.filter{!it.value.isVisible}.forEach {
                 FloatingActionButton(
-                    onClick = { },
-                    backgroundColor = Color
-                        .hsv(
-                            viewModel.stateOfMarkerPositions[it.key]?.colorHue!!,
-                            1f,
-                            1f),
-                    modifier = Modifier.rotate((it.value*180/Math.PI).toFloat() + 270)
-                ) {
-                    Timber.e(it.toString())
-                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "")
+                    onClick = {
+                              cameraPositionState.move(CameraUpdateFactory.newLatLng(it.value.latLng))
+                    },
+                    backgroundColor = it.value.color,
+                    modifier = Modifier.rotate((it.value.angleFromAxis!!)))
+                    {
+                        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "")
                 }
+                Spacer(modifier = Modifier.height(2.dp))
             }
         }
 
@@ -229,21 +215,4 @@ fun GetLinkRow(context: Context, modifier: Modifier, viewModel: MainViewModel){
     }
 }
 
-fun Context.shareLinkVia(textToSend: String){
-    val shareIntent = Intent()
-    shareIntent.action = Intent.ACTION_SEND
-    shareIntent.type="text/plain"
-    shareIntent.putExtra(Intent.EXTRA_TEXT, textToSend)
-    startActivity(Intent.createChooser(shareIntent,getString(R.string.send_to)))
-}
 
-fun Context.copyTextToClipBoard(textToCopy: String ){
-    val clipboard: ClipboardManager? =
-        this.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
-    val clip = ClipData.newPlainText("SERVER_LINK", textToCopy)
-    clipboard?.setPrimaryClip(clip)
-}
-
-enum class ActionState{
-    DEFAULT, SERVER_JOINED, SERVER_CREATED
-}

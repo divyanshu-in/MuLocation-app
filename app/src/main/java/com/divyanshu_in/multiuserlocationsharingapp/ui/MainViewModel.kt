@@ -1,25 +1,20 @@
 package com.divyanshu_in.multiuserlocationsharingapp.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Color
 import android.location.Location
-import android.util.DisplayMetrics
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.divyanshu_in.multiuserlocationsharingapp.Constants
-import com.divyanshu_in.multiuserlocationsharingapp.data.Directions
-import com.divyanshu_in.multiuserlocationsharingapp.data.MessageBody
-import com.divyanshu_in.multiuserlocationsharingapp.data.MessageType
-import com.divyanshu_in.multiuserlocationsharingapp.data.getUsername
+import com.divyanshu_in.multiuserlocationsharingapp.data.*
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.VisibleRegion
-import com.google.maps.android.compose.CameraPositionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,18 +29,21 @@ import java.util.*
 import kotlin.math.atan2
 
 class MainViewModel(): ViewModel(){
-    private var angleBetweenCorners1: Double? = null
-    private var angleBetweenCorners2: Double? = null
+
+    private var fusedLocationClient: FusedLocationProviderClient? = null
+
+    var userLocationState by mutableStateOf(LatLng(0.0, 0.0))
 
     var actionState by mutableStateOf(ActionState.DEFAULT)
     private lateinit var webSocketClient: WebSocketClient
     private lateinit var userName: String
+
     private var isConnected = false
     var linkToServerState by mutableStateOf("")
     var sharableLinkState by mutableStateOf("")
+    private var isNavigatedToUserLoc = false
 
     var stateOfMarkerPositions by mutableStateOf(mapOf<String, LocationData>())
-    var stateOfNonMapMarkerPositions by mutableStateOf(mapOf<String, Double>())
 
     fun generateServerLinkAndConnect(context: Context){
         viewModelScope.launch {
@@ -59,70 +57,47 @@ class MainViewModel(): ViewModel(){
         }
     }
 
-    private fun calculateAngleBetweenTheCorners(visibleReg: VisibleRegion){
-        if(angleBetweenCorners1 == null){
-            angleBetweenCorners1 = visibleReg.latLngBounds.center.getAngleBetween(visibleReg.farLeft, visibleReg.farRight)
-            angleBetweenCorners2 = Math.PI - angleBetweenCorners1!!
-            Timber.e(angleBetweenCorners1.toString())
-            Timber.e(angleBetweenCorners2.toString())
+    @SuppressLint("MissingPermission")
+    fun addLocationChangeListener(context: Context){
 
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+
+        fusedLocationClient?.lastLocation?.addOnSuccessListener {
+            it?.let {
+                Timber.e("lastLoc")
+                val locOfUser = LatLng(it.latitude, it.longitude)
+                sendLocation(locOfUser)
+                userLocationState = locOfUser
+                fusedLocationClient = null
+            }
         }
     }
 
     suspend fun getDirectionOfMarker(visibleRegion: VisibleRegion?){
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
 
-            val outOfBoundMarkers =
-                stateOfMarkerPositions.filter { visibleRegion?.latLngBounds?.contains(it.value.latLng) == false }
+            val mutableMap = stateOfMarkerPositions.toMutableMap()
 
-            outOfBoundMarkers.forEach {
-                val mutableMap = stateOfNonMapMarkerPositions.toMutableMap()
-                mutableMap[it.key] = visibleRegion?.nearRight?.getAngleBetween(it.value.latLng,
-                    visibleRegion.nearLeft) as Double
-                Timber.e(mutableMap[it.key].toString())
-                stateOfNonMapMarkerPositions = mutableMap
+            stateOfMarkerPositions.forEach {
 
-//            }else{
-//                val newMap = stateOfNonMapMarkerPositions.toMutableMap()
-//                newMap.remove(it.key)
-//                stateOfNonMapMarkerPositions = newMap
-//            }
+                if(visibleRegion?.latLngBounds?.contains(it.value.latLng) == false){
+                    mutableMap[it.key]?.apply {
+                        angleFromAxis = visibleRegion.nearRight.getAngleBetween(it.value.latLng, visibleRegion.nearLeft)
+                        isVisible = false
+                    }
+                }else{
+                    mutableMap[it.key]?.apply {
+                        isVisible = true
+                    }
+                }
             }
 
+            stateOfMarkerPositions = mutableMap
         }
     }
 
-
-    fun getPaddingAndDirection(latLng: LatLng, visibleReg: VisibleRegion, context: Context, user: String){
-
-        calculateAngleBetweenTheCorners(visibleReg)
-
-        val angle = visibleReg.latLngBounds.center.getAngleBetween(visibleReg.farLeft, visibleReg.farRight)
-
-        val detailsOfMarker = when(angle){
-            0.0 -> {Pair(0.dp, Directions.NORTH_WEST)}
-            in 0.0..angleBetweenCorners1!! -> {Pair(latLng.getPaddingForPointOnBounds(visibleReg.farLeft, visibleReg.farRight, context), Directions.NORTH)}
-            angleBetweenCorners1 -> Pair(0.dp, Directions.NORTH_EAST)
-            in angleBetweenCorners1!!..Math.PI -> {Pair(latLng.getPaddingForPointOnBounds(visibleReg.farRight, visibleReg.nearRight, context), Directions.WEST)}
-            Math.PI -> Pair(0.dp, Directions.SOUTH_EAST)
-            in Math.PI..(Math.PI + angleBetweenCorners1!!) -> {Pair(latLng.getPaddingForPointOnBounds(visibleReg.nearRight, visibleReg.nearLeft, context), Directions.SOUTH)}
-            (Math.PI + angleBetweenCorners1!!) -> Pair(0.dp, Directions.SOUTH_WEST)
-            in (Math.PI + angleBetweenCorners1!!)..2*Math.PI -> {Pair(latLng.getPaddingForPointOnBounds(visibleReg.nearLeft, visibleReg.farLeft, context), Directions.EAST)}
-            else -> {null}
-        }
-
-        Timber.e(detailsOfMarker.toString())
-
-        detailsOfMarker?.let {
-            val newMap = stateOfNonMapMarkerPositions.toMutableMap()
-//            newMap[user] = it
-            stateOfNonMapMarkerPositions = newMap
-        }
-    }
-
-
-    private fun LatLng.getAngleBetween(latLng1: LatLng, latLng2: LatLng): Double {
-        val angle1 = Math.atan2(
+    private fun LatLng.getAngleBetween(latLng1: LatLng, latLng2: LatLng): Float {
+        val angle1 = atan2(
             this.longitude - latLng1.longitude,
             this.latitude - latLng1.latitude
         )
@@ -132,7 +107,7 @@ class MainViewModel(): ViewModel(){
             this.latitude - latLng2.latitude
         )
 
-        return angle1 - angle2
+        return ((angle1 - angle2)*180/Math.PI).toFloat() - 90
     }
 
     private fun LatLng.getPaddingForPointOnBounds(latLng1: LatLng, latLng2: LatLng, context: Context): Dp {
@@ -197,12 +172,12 @@ class MainViewModel(): ViewModel(){
                     val messageBody = message?.parseToMessageBody()
                     if (messageBody?.msg_type == MessageType.LOCATION_MSG){
                         val newMap = stateOfMarkerPositions.toMutableMap()
-                        var hue = newMap[messageBody.username.toString()]?.colorHue
+                        var color = newMap[messageBody.username.toString()]?.color
+                        val colorHue = rnd.nextInt(360).toFloat()
+                        if(color == null)
+                            color = Color.hsv(colorHue, 1f, 1f)
 
-                        if(hue == null)
-                            hue = rnd.nextInt(360).toFloat()
-
-                        newMap[messageBody.username.toString()] = LocationData(LatLng(messageBody.lat!!, messageBody.long!!), hue)
+                        newMap[messageBody.username.toString()] = LocationData(LatLng(messageBody.lat!!, messageBody.long!!), color = color, colorHue = colorHue)
                         stateOfMarkerPositions = newMap
                     }
 
@@ -222,7 +197,8 @@ class MainViewModel(): ViewModel(){
         }
     }
 
-    fun sendLocation(latLng: LatLng){
+    private fun sendLocation(latLng: LatLng){
+        Timber.e("sending loc!")
         if(isConnected){
             val messageBodyObject = MessageBody(latLng.latitude, latLng.longitude, this@MainViewModel.userName)
             webSocketClient.send(messageBodyObject.parseToJsonString())
@@ -235,5 +211,5 @@ class MainViewModel(): ViewModel(){
 }
 
 data class LocationData(
-    val latLng: LatLng, val colorHue: Float,
+    val latLng: LatLng, val color: Color, var isVisible: Boolean = true, var angleFromAxis: Float? = null, var colorHue: Float
 )
