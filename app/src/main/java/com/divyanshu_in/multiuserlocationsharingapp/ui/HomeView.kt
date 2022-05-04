@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -35,14 +34,21 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.launch
 
 
 val permissionList = arrayListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
 
+
+@Composable
+fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?){
+    HomeDrawer(viewModel = viewModel, context, serverId)
+}
+
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?) {
+fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
 
     serverId?.let {
         viewModel.actionState = ActionState.SERVER_JOINED
@@ -61,12 +67,19 @@ fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?) {
     }
 
     LaunchedEffect(key1 = cameraPositionState.position){
-        val visibleRegion = cameraPositionState.projection?.visibleRegion
-        viewModel.getDirectionOfMarker(visibleRegion)
+        launch {
+            val visibleRegion = cameraPositionState.projection?.visibleRegion
+            viewModel.getDirectionOfMarker(visibleRegion)
+        }
     }
 
+    var isMovedOnLastKnownLocation by remember { mutableStateOf(false) }
+
     LaunchedEffect(key1 = viewModel.userLocationState){
-        cameraPositionState.move(CameraUpdateFactory.newLatLng(viewModel.userLocationState))
+        if(!isMovedOnLastKnownLocation){
+            cameraPositionState.move(CameraUpdateFactory.newLatLng(viewModel.userLocationState))
+            isMovedOnLastKnownLocation = true
+        }
     }
 
     LaunchedEffect(key1 = permissionState.allPermissionsGranted){
@@ -76,8 +89,6 @@ fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?) {
             Toast.makeText(context, "Grant All Permissions First!", Toast.LENGTH_SHORT).show()
         }
     }
-
-
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -98,15 +109,23 @@ fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?) {
         Column(modifier = Modifier
             .align(Alignment.BottomEnd)
             .padding(12.dp)) {
-            viewModel.stateOfMarkerPositions.filter{!it.value.isVisible}.forEach {
+
+            val stateOfOutOfBoundMarkers by derivedStateOf { viewModel.stateOfMarkerPositions.filter{!it.value.isVisible} }
+
+            stateOfOutOfBoundMarkers.forEach { locationOfUser ->
                 FloatingActionButton(
                     onClick = {
-                              cameraPositionState.move(CameraUpdateFactory.newLatLng(it.value.latLng))
+                              cameraPositionState.move(CameraUpdateFactory.newLatLng(locationOfUser.value.latLng))
                     },
-                    backgroundColor = it.value.color,
-                    modifier = Modifier.rotate((it.value.angleFromAxis!!)))
+                    backgroundColor = locationOfUser.value.color,
+                    modifier = Modifier.rotate((locationOfUser.value.angleFromAxis!!)))
                     {
-                        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "")
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "")
+                            locationOfUser.value.distance?.let {
+                                Text(it)
+                            }
+                        }
                 }
                 Spacer(modifier = Modifier.height(2.dp))
             }

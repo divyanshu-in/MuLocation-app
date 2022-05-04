@@ -3,6 +3,11 @@ package com.divyanshu_in.multiuserlocationsharingapp.ui
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Looper
+import androidx.compose.material.DrawerState
+import androidx.compose.material.DrawerValue
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -12,7 +17,10 @@ import androidx.lifecycle.viewModelScope
 import com.divyanshu_in.multiuserlocationsharingapp.Constants
 import com.divyanshu_in.multiuserlocationsharingapp.data.*
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.VisibleRegion
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +36,7 @@ import java.net.URI
 import java.util.*
 import kotlin.math.atan2
 
+
 class MainViewModel(): ViewModel(){
 
     private var fusedLocationClient: FusedLocationProviderClient? = null
@@ -37,6 +46,7 @@ class MainViewModel(): ViewModel(){
     var actionState by mutableStateOf(ActionState.DEFAULT)
     private lateinit var webSocketClient: WebSocketClient
     private lateinit var userName: String
+    private lateinit var locationCallback: LocationCallback
 
     private var isConnected = false
     var linkToServerState by mutableStateOf("")
@@ -53,6 +63,7 @@ class MainViewModel(): ViewModel(){
                 linkToServerState = Constants.BASE_URL + it + "_${uuid}"
                 sharableLinkState = Constants.SHARABLE_URL + it + "_${uuid}"
                 connectToWebSocket(linkToServerState)
+                addLocationUpdateListener(context)
             }
         }
     }
@@ -66,11 +77,26 @@ class MainViewModel(): ViewModel(){
             it?.let {
                 Timber.e("lastLoc")
                 val locOfUser = LatLng(it.latitude, it.longitude)
-                sendLocation(locOfUser)
                 userLocationState = locOfUser
                 fusedLocationClient = null
             }
         }
+    }
+
+
+    @SuppressLint("MissingPermission")
+    private fun addLocationUpdateListener(context: Context){
+
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 1f
+        ) { location ->
+            Timber.e(location.toString())
+            val latLng = LatLng(location.latitude, location.longitude)
+            sendLocation(latLng)
+            userLocationState = latLng
+        }
+
     }
 
     suspend fun getDirectionOfMarker(visibleRegion: VisibleRegion?){
@@ -82,6 +108,7 @@ class MainViewModel(): ViewModel(){
 
                 if(visibleRegion?.latLngBounds?.contains(it.value.latLng) == false){
                     mutableMap[it.key]?.apply {
+                        distance = userLocationState.getDistanceFrom(it.value.latLng).toInt().toString() + "m"
                         angleFromAxis = visibleRegion.nearRight.getAngleBetween(it.value.latLng, visibleRegion.nearLeft)
                         isVisible = false
                     }
@@ -198,7 +225,7 @@ class MainViewModel(): ViewModel(){
     }
 
     private fun sendLocation(latLng: LatLng){
-        Timber.e("sending loc!")
+        Timber.e("sending loc! $latLng")
         if(isConnected){
             val messageBodyObject = MessageBody(latLng.latitude, latLng.longitude, this@MainViewModel.userName)
             webSocketClient.send(messageBodyObject.parseToJsonString())
@@ -211,5 +238,10 @@ class MainViewModel(): ViewModel(){
 }
 
 data class LocationData(
-    val latLng: LatLng, val color: Color, var isVisible: Boolean = true, var angleFromAxis: Float? = null, var colorHue: Float
+    val latLng: LatLng,
+    val color: Color,
+    var isVisible: Boolean = true,
+    var angleFromAxis: Float? = null,
+    var colorHue: Float,
+    var distance: String? = null,
 )
