@@ -53,6 +53,8 @@ class MainViewModel(): ViewModel(){
     var sharableLinkState by mutableStateOf("")
     private var isNavigatedToUserLoc = false
 
+    var stateOfMessagesReceived by mutableStateOf(listOf<Pair<String, String>>())
+
     var stateOfMarkerPositions by mutableStateOf(mapOf<String, LocationData>())
 
     fun generateServerLinkAndConnect(context: Context){
@@ -197,15 +199,26 @@ class MainViewModel(): ViewModel(){
 
                 override fun onMessage(message: String?) {
                     val messageBody = message?.parseToMessageBody()
-                    if (messageBody?.msg_type == MessageType.LOCATION_MSG){
-                        val newMap = stateOfMarkerPositions.toMutableMap()
-                        var color = newMap[messageBody.username.toString()]?.color
-                        val colorHue = rnd.nextInt(360).toFloat()
-                        if(color == null)
-                            color = Color.hsv(colorHue, 1f, 1f)
+                    val username = messageBody?.username.toString()
+                    when (messageBody?.msg_type) {
+                        MessageType.LOCATION_MSG -> {
+                            val newMap = stateOfMarkerPositions.toMutableMap()
+                            var color = newMap[username]?.color
+                            val colorHue = rnd.nextInt(360).toFloat()
+                            if(color == null)
+                                color = Color.hsv(colorHue, 1f, 1f)
 
-                        newMap[messageBody.username.toString()] = LocationData(LatLng(messageBody.lat!!, messageBody.long!!), color = color, colorHue = colorHue)
-                        stateOfMarkerPositions = newMap
+                            newMap[username] = LocationData(LatLng(messageBody.lat!!, messageBody.long!!), color = color, colorHue = colorHue)
+                            stateOfMarkerPositions = newMap
+                        }
+                        MessageType.GENERAL_MSG -> {
+                            if(messageBody.message?.contains("You are connected") == false){
+                                val newList = stateOfMessagesReceived.toMutableList()
+                                newList.add(Pair(username, messageBody.message.toString()))
+                                stateOfMessagesReceived = newList
+                                Timber.e(stateOfMessagesReceived.toString())
+                            }
+                        }
                     }
 
                     Timber.e(message)
@@ -221,6 +234,17 @@ class MainViewModel(): ViewModel(){
                 }
             }
             webSocketClient.connect()
+        }
+    }
+
+    fun sendTextMessage(text: String){
+        if(isConnected){
+            val newList = stateOfMessagesReceived.toMutableList()
+            newList.add(Pair(userName, text))
+            stateOfMessagesReceived = newList
+
+            val messageBodyObject = MessageBody(username = this@MainViewModel.userName, message = text, msg_type = MessageType.GENERAL_MSG)
+            webSocketClient.send(messageBodyObject.parseToJsonString())
         }
     }
 
