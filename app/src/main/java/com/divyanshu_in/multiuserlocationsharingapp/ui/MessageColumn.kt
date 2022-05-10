@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.divyanshu_in.multiuserlocationsharingapp.utils.VerticalSpacer
 
 @Composable
 fun MessageColumn(viewModel: MainViewModel){
@@ -25,7 +26,16 @@ fun MessageColumn(viewModel: MainViewModel){
         }
 
         CreateTextRow(viewModel)
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(2.dp))
+        Button(
+            onClick = {  },
+            colors = ButtonDefaults.buttonColors(Color.Red),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 4.dp)) {
+            Text("Leave Server!", color = Color.White)
+        }
+        VerticalSpacer(12)
     }
 
 }
@@ -33,12 +43,12 @@ fun MessageColumn(viewModel: MainViewModel){
 @Composable
 fun CreateTextRow(viewModel: MainViewModel) {
     
-    Card(shape = RoundedCornerShape(16.dp)) {
+    Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.padding(4.dp)) {
         var textValueState by remember{mutableStateOf("")}
         Row{
             TextField(value = textValueState, onValueChange = {
                 textValueState = it
-            })
+            }, colors = TextFieldDefaults.textFieldColors(backgroundColor = Color.White))
             IconButton(onClick = {
                 viewModel.sendTextMessage(textValueState)
             }) {
@@ -52,7 +62,7 @@ fun CreateTextRow(viewModel: MainViewModel) {
 
 @Composable
 fun Message(userMsgPair: Pair<String, String>, locationData: LocationData?){
-    Row(horizontalArrangement = if(locationData== null) Arrangement.End else Arrangement.Start) {
+    Row(horizontalArrangement = if(locationData == null) Arrangement.End else Arrangement.Start) {
         if(locationData==null){
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(text = "You",

@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,16 +26,19 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.divyanshu_in.multiuserlocationsharingapp.R
 import com.divyanshu_in.multiuserlocationsharingapp.data.ActionState
+import com.divyanshu_in.multiuserlocationsharingapp.utils.HorizontalSpacer
 import com.divyanshu_in.multiuserlocationsharingapp.utils.copyTextToClipBoard
 import com.divyanshu_in.multiuserlocationsharingapp.utils.shareLinkVia
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 
 val permissionList = arrayListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -91,19 +95,55 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-
         
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             properties = MapProperties(isMyLocationEnabled = permissionState.allPermissionsGranted),
-            uiSettings = MapUiSettings(zoomControlsEnabled = false)
+            uiSettings = MapUiSettings(zoomControlsEnabled = false),
+            onMapLongClick = { loc ->
+                viewModel.addShareableMarker(loc)
+            }
         ){
 
             viewModel.stateOfMarkerPositions.forEach { userLocObject ->
                 val markerState = rememberMarkerState(position = userLocObject.value.latLng)
                 Marker(state = markerState , title = userLocObject.key, icon = BitmapDescriptorFactory.defaultMarker(userLocObject.value.colorHue))
             }
+
+            viewModel.stateOfShareableMarkers.forEach { markerDetails ->
+                val markerState = rememberMarkerState(position = LatLng(markerDetails.lat, markerDetails.long))
+                var infoWindowState by remember { mutableStateOf(false) }
+
+
+                MarkerInfoWindow(visible = true,
+                    state = markerState,
+                    icon = BitmapDescriptorFactory.defaultMarker(markerDetails.colorHue), onClick = {
+                        return@MarkerInfoWindow false
+                    }){
+                    Card(backgroundColor = Color.White, modifier = Modifier.padding(12.dp)) {
+                        Row {
+                            Text(markerDetails.title)
+                        }
+                        HorizontalSpacer(2)
+                        IconButton(onClick = { Timber.e("clicked") }) {
+                            Icon(imageVector = Icons.Rounded.Edit, contentDescription = null)
+                        }
+                    }
+                }
+
+//                Marker(
+//                    onClick = {
+//                              infoWindowState = !infoWindowState
+//                        return@Marker false
+//                    },
+//                    state = markerState ,
+//                    title = markerDetails.title,
+//                    icon = BitmapDescriptorFactory.defaultMarker(markerDetails.colorHue)){
+//
+//                }
+            }
+
         }
 
         Column(modifier = Modifier

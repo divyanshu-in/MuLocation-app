@@ -37,7 +37,7 @@ import java.util.*
 import kotlin.math.atan2
 
 
-class MainViewModel(): ViewModel(){
+class MainViewModel: ViewModel(){
 
     private var fusedLocationClient: FusedLocationProviderClient? = null
 
@@ -46,12 +46,13 @@ class MainViewModel(): ViewModel(){
     var actionState by mutableStateOf(ActionState.DEFAULT)
     private lateinit var webSocketClient: WebSocketClient
     private lateinit var userName: String
-    private lateinit var locationCallback: LocationCallback
 
-    private var isConnected = false
+    private var isConnected by mutableStateOf(false)
     var linkToServerState by mutableStateOf("")
     var sharableLinkState by mutableStateOf("")
     private var isNavigatedToUserLoc = false
+
+    var stateOfShareableMarkers by mutableStateOf( listOf<MarkerDetails>())
 
     var stateOfMessagesReceived by mutableStateOf(listOf<Pair<String, String>>())
 
@@ -67,6 +68,28 @@ class MainViewModel(): ViewModel(){
                 connectToWebSocket(linkToServerState)
                 addLocationUpdateListener(context)
             }
+        }
+    }
+
+    fun addShareableMarker(pos: LatLng){
+
+        val colorHue = Random().nextInt(360).toFloat()
+        val markerId = UUID.randomUUID().toString()
+
+        val markerDetails = MarkerDetails(markerId, "", colorHue, pos.latitude, pos.longitude)
+
+        val mutableListOfMarkers = stateOfShareableMarkers.toMutableList().also {
+            it.add(markerDetails)
+        }
+        stateOfShareableMarkers = mutableListOfMarkers
+
+        sendMarkerDetails(markerDetails)
+    }
+
+    fun sendMarkerDetails(markerDetails: MarkerDetails){
+        if(isConnected){
+            val messageBodyObject = MessageBody(username = this@MainViewModel.userName,  msg_type = MessageType.MARKER_MSG, markerDetails = markerDetails)
+            webSocketClient.send(messageBodyObject.parseToJsonString())
         }
     }
 
@@ -217,6 +240,23 @@ class MainViewModel(): ViewModel(){
                                 newList.add(Pair(username, messageBody.message.toString()))
                                 stateOfMessagesReceived = newList
                                 Timber.e(stateOfMessagesReceived.toString())
+                            }
+                        }
+                        MessageType.MARKER_MSG ->{
+                            when(messageBody.markerDetails?.action){
+                                MarkerAction.DELETE -> {
+                                    stateOfShareableMarkers.toMutableList().also { mutableList ->
+                                        mutableList.removeIf { it.markerId == messageBody.markerDetails.markerId }
+                                    }
+                                }
+                                MarkerAction.ADD -> {
+                                    stateOfShareableMarkers.toMutableList().also { mutableList ->
+                                        mutableList.add(messageBody.markerDetails)
+                                    }
+                                }
+                                MarkerAction.UPDATE -> {}
+
+                                null -> {}
                             }
                         }
                     }
