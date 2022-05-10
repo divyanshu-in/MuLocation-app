@@ -299,6 +299,29 @@ class MainViewModel: ViewModel(){
     fun MessageBody.parseToJsonString() = Json.encodeToString(this)
 
     fun String.parseToMessageBody() = Json.decodeFromString<MessageBody>(this)
+
+    fun updateMarker(markerDetails: MarkerDetails) {
+        sendMarkerDetails(markerDetails.also {
+            it.action = MarkerAction.UPDATE
+        })
+
+        stateOfShareableMarkers.toMutableList().also { mutableList ->
+            mutableList.removeIf { it.markerId == markerDetails.markerId }
+            mutableList.add(markerDetails)
+            stateOfShareableMarkers = mutableList
+        }
+    }
+
+    fun deleteMarker(markerDetails: MarkerDetails) {
+        sendMarkerDetails(markerDetails.also { details ->
+            details.action = MarkerAction.DELETE
+        })
+
+        stateOfShareableMarkers.toMutableList().also { mutableList ->
+            mutableList.removeIf { it.markerId == markerDetails.markerId }
+            stateOfShareableMarkers = mutableList
+        }
+    }
 }
 
 data class LocationData(

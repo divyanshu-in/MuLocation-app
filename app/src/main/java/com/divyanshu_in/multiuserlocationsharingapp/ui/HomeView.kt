@@ -12,7 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,24 +22,25 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.divyanshu_in.multiuserlocationsharingapp.R
 import com.divyanshu_in.multiuserlocationsharingapp.data.ActionState
+import com.divyanshu_in.multiuserlocationsharingapp.data.MarkerDetails
 import com.divyanshu_in.multiuserlocationsharingapp.utils.HorizontalSpacer
+import com.divyanshu_in.multiuserlocationsharingapp.utils.VerticalSpacer
 import com.divyanshu_in.multiuserlocationsharingapp.utils.copyTextToClipBoard
 import com.divyanshu_in.multiuserlocationsharingapp.utils.shareLinkVia
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.launch
-import timber.log.Timber
 
 
 val permissionList = arrayListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -95,7 +97,10 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        
+
+        var markerDetailsState: MarkerDetails? by remember{ mutableStateOf(null) }
+        var markerActionDialogVisibilityState by remember{ mutableStateOf(false) }
+
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
@@ -113,38 +118,27 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
 
             viewModel.stateOfShareableMarkers.forEach { markerDetails ->
                 val markerState = rememberMarkerState(position = LatLng(markerDetails.lat, markerDetails.long))
-                var infoWindowState by remember { mutableStateOf(false) }
 
-
-                MarkerInfoWindow(visible = true,
+                MarkerInfoWindow(onInfoWindowClick = {
+                    markerDetailsState = markerDetails
+                    markerActionDialogVisibilityState = true
+                }, draggable = true, visible = true,
                     state = markerState,
                     icon = BitmapDescriptorFactory.defaultMarker(markerDetails.colorHue), onClick = {
                         return@MarkerInfoWindow false
                     }){
-                    Card(backgroundColor = Color.White, modifier = Modifier.padding(12.dp)) {
-                        Row {
-                            Text(markerDetails.title)
-                        }
+                    Card(backgroundColor = Color.White, modifier = Modifier.padding(top = 12.dp, start = 12.dp, end = 12.dp)) {
+                        Text(markerDetails.title)
                         HorizontalSpacer(2)
-                        IconButton(onClick = { Timber.e("clicked") }) {
-                            Icon(imageVector = Icons.Rounded.Edit, contentDescription = null)
-                        }
+                        Text(text = "tap for more options", fontStyle = FontStyle.Italic, color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(32.dp))
+
                     }
                 }
-
-//                Marker(
-//                    onClick = {
-//                              infoWindowState = !infoWindowState
-//                        return@Marker false
-//                    },
-//                    state = markerState ,
-//                    title = markerDetails.title,
-//                    icon = BitmapDescriptorFactory.defaultMarker(markerDetails.colorHue)){
-//
-//                }
             }
 
         }
+
+
 
         Column(modifier = Modifier
             .align(Alignment.BottomEnd)
@@ -205,6 +199,51 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
                             )
                         }
                     }
+                }
+            }
+        }
+
+        if(markerActionDialogVisibilityState){
+            markerDetailsState?.let {
+                Dialog(onDismissRequest = { markerActionDialogVisibilityState = false }) {
+                    MarkerActionDialog(viewModel = viewModel, markerDetails = it) {
+                        markerActionDialogVisibilityState = false
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun MarkerActionDialog(viewModel: MainViewModel, markerDetails: MarkerDetails, dismissDialogCallback: () -> Unit){
+    Card(modifier = Modifier.padding(16.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "Edit Title", color = Color.Gray)
+            VerticalSpacer(height = 2)
+            var textState by remember{mutableStateOf(markerDetails.title)}
+            TextField(value = textState, onValueChange = {textState = it})
+            VerticalSpacer(height = 8)
+            Row() {
+                IconButton(
+                    onClick =
+                    {
+                        viewModel.updateMarker(markerDetails.also {
+                            it.title = textState
+                        })
+                        dismissDialogCallback.invoke()
+                    }
+                ) {
+                    Icon(imageVector = Icons.Rounded.Done, contentDescription = null, tint = Color.Green)
+                }
+
+                IconButton(
+                    onClick = {
+                        viewModel.deleteMarker(markerDetails)
+                        dismissDialogCallback.invoke()
+                    }) {
+                    Icon(imageVector = Icons.Rounded.Delete, contentDescription = null, tint = Color.Red)
                 }
             }
         }

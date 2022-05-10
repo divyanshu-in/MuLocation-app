@@ -15,11 +15,11 @@ data class MessageBody(
 @kotlinx.serialization.Serializable
 data class MarkerDetails(
     val markerId: String,
-    val title: String,
+    var title: String,
     val colorHue: Float,
     val lat: Double,
     val long: Double,
-    val action: MarkerAction = MarkerAction.ADD
+    var action: MarkerAction = MarkerAction.ADD
 )
 
 enum class MessageType{
