@@ -135,7 +135,6 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
                     }
                 }
             }
-
         }
 
 
