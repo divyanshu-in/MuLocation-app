@@ -2,7 +2,9 @@ package com.divyanshu_in.multiuserlocationsharingapp.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -23,9 +25,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.divyanshu_in.multiuserlocationsharingapp.MainActivity
 import com.divyanshu_in.multiuserlocationsharingapp.R
 import com.divyanshu_in.multiuserlocationsharingapp.data.ActionState
 import com.divyanshu_in.multiuserlocationsharingapp.data.MarkerDetails
@@ -47,8 +51,48 @@ val permissionList = arrayListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manif
 
 
 @Composable
-fun HomeView(context: Context, viewModel: MainViewModel, serverId: String?){
-    HomeDrawer(viewModel = viewModel, context, serverId)
+fun HomeView(context: Activity, viewModel: MainViewModel, serverId: String?){
+    var rememberAlertDialogState by remember{ mutableStateOf(false)}
+    HomeDrawer(viewModel = viewModel, context, serverId) {
+        rememberAlertDialogState = true
+    }
+
+    if (rememberAlertDialogState){
+        LeaveServerDialog(context){
+            rememberAlertDialogState = false
+        }
+    }
+}
+
+@Composable
+fun LeaveServerDialog(activity: Activity, onDismissRequest: () -> Unit){
+    AlertDialog(
+        onDismissRequest = { onDismissRequest.invoke() },
+        confirmButton = {
+            Button(onClick = {
+                activity.apply {
+                    startActivity(Intent(this, MainActivity::class.java))
+                    finish()
+                }
+            }) {
+                Text(text = "Confirm")
+            }
+    },
+        dismissButton = {
+            Button(onClick = {
+                onDismissRequest.invoke()
+            }) {
+                Text(text = "Cancel")
+            }
+        }
+    ,
+        title = {
+                Text(text = "Want To Leave Server?", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+    , text ={
+            Text(text = "You can join server again, using the link shared to you!, even if you are admin.", color = Color.Gray)
+        } 
+    )
 }
 
 @SuppressLint("MissingPermission")

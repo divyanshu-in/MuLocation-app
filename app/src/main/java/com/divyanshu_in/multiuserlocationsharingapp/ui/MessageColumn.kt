@@ -1,5 +1,7 @@
 package com.divyanshu_in.multiuserlocationsharingapp.ui
 
+import android.app.Activity
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,30 +18,37 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.divyanshu_in.multiuserlocationsharingapp.MainActivity
+import com.divyanshu_in.multiuserlocationsharingapp.data.ActionState
 import com.divyanshu_in.multiuserlocationsharingapp.utils.VerticalSpacer
 
 @Composable
-fun MessageColumn(viewModel: MainViewModel){
+fun MessageColumn(viewModel: MainViewModel, context: Activity, onLeaveServerButtonClick: () -> Unit){
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceEvenly) {
         LazyColumn(modifier = Modifier
             .weight(1f)
             .fillMaxWidth()){
             items(viewModel.stateOfMessagesReceived){ usrMsgPair ->
-                Message(usrMsgPair, viewModel.stateOfMarkerPositions[usrMsgPair.first])
+                Message(usrMsgPair, viewModel.stateOfMarkerPositions[usrMsgPair.first], onLeaveServerButtonClick)
                 ListSeparator()
             }
         }
 
         CreateTextRow(viewModel)
         Spacer(modifier = Modifier.height(2.dp))
-        Button(
-            onClick = {  },
-            colors = ButtonDefaults.buttonColors(Color.Red),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 4.dp, end = 4.dp)) {
-            Text("Leave Server!", color = Color.White)
+        if (viewModel.actionState != ActionState.DEFAULT){
+            Button(
+                onClick = {
+                    onLeaveServerButtonClick.invoke()
+                },
+                colors = ButtonDefaults.buttonColors(Color.Red),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 4.dp)) {
+                Text("Leave Server!", color = Color.White)
+            }
         }
+
         VerticalSpacer(12)
     }
 
@@ -66,7 +75,11 @@ fun CreateTextRow(viewModel: MainViewModel) {
 
 
 @Composable
-fun Message(userMsgPair: Pair<String, String>, locationData: LocationData?){
+fun Message(
+    userMsgPair: Pair<String, String>,
+    locationData: LocationData?,
+    onLeaveServerButtonClick: () -> Unit
+){
 
     Row(horizontalArrangement = if(locationData == null) Arrangement.End else Arrangement.Start, modifier = Modifier.padding(4.dp)) {
         if(locationData==null){

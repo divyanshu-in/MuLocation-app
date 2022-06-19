@@ -1,5 +1,6 @@
 package com.divyanshu_in.multiuserlocationsharingapp.ui
 
+import android.app.Activity
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -24,7 +25,7 @@ import com.divyanshu_in.multiuserlocationsharingapp.utils.VerticalSpacer
 import kotlinx.coroutines.launch
 
 @Composable
-fun HomeDrawer(viewModel: MainViewModel, context: Context, serverId: String?) {
+fun HomeDrawer(viewModel: MainViewModel, context: Activity, serverId: String?, onLeaveServerButtonClick: () -> Unit) {
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -33,7 +34,7 @@ fun HomeDrawer(viewModel: MainViewModel, context: Context, serverId: String?) {
     } }
 
     ModalDrawer(drawerContent = {
-        DrawerContentColumn(viewModel)
+        DrawerContentColumn(viewModel, context, onLeaveServerButtonClick)
 
     }, drawerState = drawerState, content = {
         Box {
@@ -53,56 +54,4 @@ fun HomeDrawer(viewModel: MainViewModel, context: Context, serverId: String?) {
         }
     }
     , gesturesEnabled = gestureState)
-}
-
-@Composable
-fun DrawerContentColumn(viewModel: MainViewModel){
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text("Users Onboard", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
-        Spacer(modifier = Modifier.height(4.dp))
-        MarkerList(viewModel = viewModel)
-        VerticalSpacer(height = 10)
-        ListSeparator()
-        VerticalSpacer(height = 18)
-        Text("Chat", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
-        Spacer(modifier = Modifier.height(4.dp))
-        MessageColumn(viewModel = viewModel)
-    }
-}
-
-@Composable
-fun ListSeparator(){
-    Card(modifier = Modifier
-        .fillMaxWidth()
-        .height(1.dp)
-        .background(Color.Black)){}
-}
-
-@Composable
-fun MarkerList(viewModel: MainViewModel){
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        if(viewModel.stateOfMarkerPositions.isEmpty()){
-            CircularProgressIndicator()
-            VerticalSpacer(height = 2)
-            Text("Waiting for users to join!", fontWeight = FontWeight.SemiBold, color = Color.Gray)
-        }
-        viewModel.stateOfMarkerPositions.forEach {
-            MarkerDetailsView(markerDetails = it)
-            ListSeparator()
-            VerticalSpacer(height = 2)
-        }
-    }
-}
-
-@Composable
-fun MarkerDetailsView(markerDetails: Map.Entry<String, LocationData>){
-    Row(modifier = Modifier.fillMaxWidth()) {
-        Icon(painterResource(id = R.drawable.ic_radio_button_filled), contentDescription = "", tint = markerDetails.value.color, modifier = Modifier.padding(2.dp))
-        HorizontalSpacer(width = 4)
-        Column {
-            Text(markerDetails.key, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-            VerticalSpacer(height = 2)
-            Text(markerDetails.value.distance + " away", color = Color.Gray)
-        }
-    }
 }

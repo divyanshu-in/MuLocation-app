@@ -124,6 +124,8 @@ class MainViewModel: ViewModel(){
 
     }
 
+
+    //  calculates
     suspend fun getDirectionOfMarker(visibleRegion: VisibleRegion?){
         withContext(Dispatchers.Default) {
 
@@ -133,7 +135,7 @@ class MainViewModel: ViewModel(){
 
                 if(visibleRegion?.latLngBounds?.contains(it.value.latLng) == false){
                     mutableMap[it.key]?.apply {
-                        distance = userLocationState.getDistanceFrom(it.value.latLng).toInt().toString() + "m"
+                        distance = getDistanceWithApprUnit(userLocationState.getDistanceFrom(it.value.latLng).toInt())
                         angleFromAxis = visibleRegion.nearRight.getAngleBetween(it.value.latLng, visibleRegion.nearLeft)
                         isVisible = false
                     }
@@ -145,6 +147,16 @@ class MainViewModel: ViewModel(){
             }
 
             stateOfMarkerPositions = mutableMap
+        }
+    }
+
+//    returns distance in appropriate unit (km/m).
+    suspend fun getDistanceWithApprUnit(distance: Int): String {
+        when(distance){
+            in 0..100 -> {
+                return "$distance'm'"
+            }
+            else -> return "${distance/1000}km"
         }
     }
 
