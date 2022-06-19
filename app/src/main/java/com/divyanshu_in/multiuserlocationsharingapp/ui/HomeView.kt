@@ -190,6 +190,7 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
                         GetLinkRow(context, modifier = Modifier.align(Alignment.Center), viewModel)
                     }
                 }else{
+                    VerticalSpacer(height = 80)
                     Card(shape = CircleShape, modifier = Modifier.padding(16.dp)){
                         IconButton(onClick = {dialogVisibilityState = true}) {
                             Icon(
