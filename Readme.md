@@ -1,14 +1,16 @@
 <p align="center"><img src="https://imgur.com/1iegBD1.png" alt="drawing" width=260/></p>
 <p align="center">Multi User Location Share App (μLocation or MuLocation) built with Jetpack Compose.
-</p><br>
+</p>
+<div align="center">
 
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
+</div>
 
 <p align = "center" >
-<a href = "https://github.com/divyanshu-in/MuLocation-app/releases/download/beta/mulocation.apk"><img src="https://imgur.com/qEu3Dht.png" height="100"></a>
+<a href = "https://github.com/divyanshu-in/MuLocation-app/releases/download/beta/mulocation.apk"><img src="https://imgur.com/qEu3Dht.png" height="200"></a>
 </p>
 
 ***backend source*** <br>
