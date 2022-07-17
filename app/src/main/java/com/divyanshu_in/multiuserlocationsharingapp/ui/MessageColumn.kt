@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -23,17 +24,23 @@ import com.divyanshu_in.multiuserlocationsharingapp.data.ActionState
 import com.divyanshu_in.multiuserlocationsharingapp.utils.VerticalSpacer
 
 @Composable
-fun MessageColumn(viewModel: MainViewModel, context: Activity, onLeaveServerButtonClick: () -> Unit){
+fun MessageColumn(viewModel: MainViewModel, onLeaveServerButtonClick: () -> Unit){
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceEvenly) {
-        LazyColumn(modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()){
-            items(viewModel.stateOfMessagesReceived){ usrMsgPair ->
-                Message(usrMsgPair, viewModel.stateOfMarkerPositions[usrMsgPair.first], onLeaveServerButtonClick)
-                ListSeparator()
+        if(viewModel.stateOfMessagesReceived.isNotEmpty()){
+            LazyColumn(modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()){
+                items(viewModel.stateOfMessagesReceived){ usrMsgPair ->
+                    Message(usrMsgPair, viewModel.stateOfMarkerPositions[usrMsgPair.first], onLeaveServerButtonClick)
+                    ListSeparator()
+                }
+            }
+        }else{
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(text = "No Messages Yet!", color = Color.Gray, fontStyle = FontStyle.Italic)
             }
         }
-
+        
         CreateTextRow(viewModel)
         Spacer(modifier = Modifier.height(2.dp))
         if (viewModel.actionState != ActionState.DEFAULT){
@@ -82,7 +89,9 @@ fun Message(
 ){
 
     Row(horizontalArrangement = if(locationData == null) Arrangement.End else Arrangement.Start, modifier = Modifier.padding(4.dp)) {
-        if(locationData==null){
+        if(userMsgPair.second.contains("joined the server")){
+            Text(userMsgPair.second, color = Color.Gray, fontStyle = FontStyle.Italic)
+        }else if(locationData==null){
             Column(modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()) {

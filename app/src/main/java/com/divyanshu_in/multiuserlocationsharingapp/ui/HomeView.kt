@@ -163,19 +163,23 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
             viewModel.stateOfShareableMarkers.forEach { markerDetails ->
                 val markerState = rememberMarkerState(position = LatLng(markerDetails.lat, markerDetails.long))
 
+                var markerInfoVisibilityState by remember{ mutableStateOf(true)}
+
                 MarkerInfoWindow(onInfoWindowClick = {
                     markerDetailsState = markerDetails
                     markerActionDialogVisibilityState = true
+                    it.hideInfoWindow()
                 }, draggable = true, visible = true,
                     state = markerState,
                     icon = BitmapDescriptorFactory.defaultMarker(markerDetails.colorHue), onClick = {
                         return@MarkerInfoWindow false
                     }){
                     Card(backgroundColor = Color.White, modifier = Modifier.padding(top = 12.dp, start = 12.dp, end = 12.dp)) {
-                        Text(markerDetails.title)
-                        HorizontalSpacer(2)
-                        Text(text = "tap for more options", fontStyle = FontStyle.Italic, color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(32.dp))
-
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(markerDetails.title)
+                            HorizontalSpacer(2)
+                            Text(text = "tap for more options", fontStyle = FontStyle.Italic, color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
+                        }
                     }
                 }
             }
@@ -204,7 +208,7 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
                             }
                         }
                 }
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(6.dp))
             }
         }
 
@@ -218,8 +222,6 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
             ActionState.SERVER_JOINED -> {
                 if(permissionState.allPermissionsGranted){
                     viewModel.joinWebSocketFromDeepLink(serverId!!)
-
-
                 }else{
                     LaunchedEffect(key1 = true){
                         permissionState.launchMultiplePermissionRequest()
@@ -301,11 +303,11 @@ fun ButtonGroup(context: Context, modifier: Modifier, viewModel: MainViewModel){
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
 
-        FloatingActionButton(onClick = {
-        }, shape = RoundedCornerShape(16.dp)){
-            Text(text = "Join Server", modifier = Modifier.padding(16.dp, 8.dp, 16.dp, 8.dp))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
+//        FloatingActionButton(onClick = {
+//        }, shape = RoundedCornerShape(16.dp)){
+//            Text(text = "Join Server", modifier = Modifier.padding(16.dp, 8.dp, 16.dp, 8.dp))
+//        }
+//        Spacer(modifier = Modifier.height(16.dp))
         FloatingActionButton(onClick = {
             if(permissionState.allPermissionsGranted){
                 viewModel.generateServerLinkAndConnect(context)

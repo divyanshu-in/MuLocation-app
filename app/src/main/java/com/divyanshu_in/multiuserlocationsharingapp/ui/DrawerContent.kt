@@ -10,27 +10,38 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.divyanshu_in.multiuserlocationsharingapp.R
+import com.divyanshu_in.multiuserlocationsharingapp.data.ActionState
 import com.divyanshu_in.multiuserlocationsharingapp.utils.HorizontalSpacer
 import com.divyanshu_in.multiuserlocationsharingapp.utils.VerticalSpacer
 
 @Composable
 fun DrawerContentColumn(viewModel: MainViewModel, context: Activity, onLeaveServerButtonClick: () -> Unit){
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text("Users Onboard", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(
-            Alignment.CenterHorizontally))
-        VerticalSpacer(height = 4)
-        MarkerList(viewModel = viewModel)
-        VerticalSpacer(height = 10)
-        ListSeparator()
-        VerticalSpacer(height = 18)
-        Text("Chat", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(
-            Alignment.CenterHorizontally))
-        VerticalSpacer(height = 4)
-        MessageColumn(viewModel = viewModel, context, onLeaveServerButtonClick)
+
+    if(viewModel.actionState != ActionState.DEFAULT){
+        Column(modifier = Modifier.fillMaxSize()) {
+            Text("Users Onboard", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(
+                Alignment.CenterHorizontally))
+            VerticalSpacer(height = 4)
+            MarkerList(viewModel = viewModel)
+            VerticalSpacer(height = 10)
+            ListSeparator()
+            VerticalSpacer(height = 18)
+            Text("Chat", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(
+                Alignment.CenterHorizontally))
+            VerticalSpacer(height = 4)
+            MessageColumn(viewModel = viewModel, onLeaveServerButtonClick)
+        }
+    }else{
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(8.dp)) {
+            Text(text = "Options like chats, server details will appear here, once you create or join a server!",
+                fontStyle = FontStyle.Italic,
+                color = Color.Gray)
+        }
     }
 }
 
