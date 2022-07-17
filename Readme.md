@@ -4,16 +4,17 @@ Multi User Location Share App (μLocation or MuLocation) built with Jetpack Comp
 # collaborative location sharing app.
 
 **create or join a room, using sharable links.**
-
+<p float="left">
 <img src="https://imgur.com/isAjqrN.png" alt="drawing" width="200"/>
 <img src="https://imgur.com/mu0C0qd.png" alt="drawing" width="200"/>
-
+</p>
 </br>
 
 **invite friends to room via link.**
-
+<p float="left">
 <img src="https://imgur.com/vZLO07m.png" alt="drawing" width="200"/>
 <img src="https://imgur.com/gQ0A17h.png" alt="drawing" width="200"/>
+</p>
 
 *shows distance and direction in realtime.*
 
@@ -26,6 +27,7 @@ Multi User Location Share App (μLocation or MuLocation) built with Jetpack Comp
 </br>
 
 **add markers with instructions**
-
+<p float="left">
 <img src="https://imgur.com/GxrtflF.png" alt="drawing" width="200"/>
 <img src="https://imgur.com/PPO5JOC.png" alt="drawing" width="200">
+</p>
