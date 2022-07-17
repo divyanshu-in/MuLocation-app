@@ -8,7 +8,7 @@
 [![Issues][issues-shield]][issues-url]
 
 <p align = "center" >
-<a href = "https://github.com/divyanshu-in/MuLocation-app/releases/download/beta/mulocation.apk"><img src="https://imgur.com/qEu3Dht.png" height=200></a>
+<a href = "https://github.com/divyanshu-in/MuLocation-app/releases/download/beta/mulocation.apk"><img src="https://imgur.com/qEu3Dht.png" height="100"></a>
 </p>
 
 ***backend source*** <br>
