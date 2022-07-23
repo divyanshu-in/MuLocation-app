@@ -9,9 +9,11 @@
 [![Issues][issues-shield]][issues-url]
 </div>
 
-<p align = "center" >
-<a href = "https://github.com/divyanshu-in/MuLocation-app/releases/download/beta/mulocation.apk"><img src="https://imgur.com/qEu3Dht.png" height="50"></a>
+
+<p align="center">
+<a href="https://github.com/flaam-org/flaam-android/releases/download/continuous/app-debug.apk"><img src="https://imgur.com/fsKjoYf.png" alt="Download Apk" style="width:300px;"></a>
 </p>
+
 
 ***backend source*** <br>
 https://github.com/divyanshu-in/MuLocation-backend <br>
