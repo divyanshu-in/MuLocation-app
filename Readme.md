@@ -25,7 +25,20 @@ https://github.com/divyanshu-in/MuLocation-backend <br>
 * Allows users to chat on the go.
 * users can use markers to point the destinations.
 
-<br><br>
+<br>
+
+# Comparison With Other Navigation Apps
+
+| Features  | Other Apps | μLocation |
+| ------------- | ------------- | ----- |
+| Works Without Login  |  ✕	 |✓|
+| Multiple Users Allowed  | ✕  |✓|
+| Chat Room  |  ✕ |✓|
+| Collaborative Markers  |  ✕ |✓|
+| User Friendly  |  ✕ |✓|
+| Size Of App | > 50 MB | <10 MB|
+
+<br>
 
 # ScreenShots
 **create or join a room, using sharable links.**
