@@ -5,7 +5,6 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.Paint
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -98,7 +97,12 @@ fun LeaveServerDialog(activity: Activity, onDismissRequest: () -> Unit) {
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MapView(context: Context, viewModel: MainViewModel, serverId: String?, onMenuButtonClick: () -> Unit) {
+fun MapView(
+    context: Context,
+    viewModel: MainViewModel,
+    serverId: String?,
+    onMenuButtonClick: () -> Unit,
+) {
 
     serverId?.let {
         viewModel.actionState = ActionState.SERVER_JOINED
@@ -155,13 +159,32 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?, onMen
             }
         ) {
 
-            if (viewModel.stateOfPolygons.value.isNotEmpty()) {
-                viewModel.stateOfPolygons.value.mapIndexed { index, latLng ->
+            if (viewModel.stopsPolylineState.value.isNotEmpty()) {
+                viewModel.stopsPolylineState.value.mapIndexed { index, latLng ->
                     "$index lat - ${latLng.latitude} long - ${latLng.longitude}"
                 }.also {
                     Timber.e(it.toString())
                 }
-                Polyline(points = viewModel.stateOfPolygons.value, color = Colors.orange, jointType = JointType.ROUND, width = 20f, startCap = RoundCap(), endCap = RoundCap())
+
+                // polyline between all the stops
+                Polyline(points = viewModel.stopsPolylineState.value,
+                    color = Colors.orange,
+                    jointType = JointType.ROUND,
+                    width = 20f,
+                    startCap = RoundCap(),
+                    endCap = RoundCap()
+                )
+
+                // polyline between user and first stop
+
+                Polyline(points = viewModel.stateOfUserPolyline.value,
+                    color = Colors.green,
+                    jointType = JointType.ROUND,
+                    width = 20f,
+                    startCap = RoundCap(),
+                    endCap = RoundCap()
+                )
+
             }
 
             viewModel.stateOfMarkerPositions.forEach { userLocObject ->
@@ -241,7 +264,9 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?, onMen
             }
         }
 
-        Column(modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
+        Column(modifier = Modifier
+            .align(Alignment.TopStart)
+            .padding(16.dp)) {
             Card(shape = CircleShape, backgroundColor = Color.White) {
                 IconButton(onClick = {
                     onMenuButtonClick()
@@ -255,9 +280,9 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?, onMen
             VerticalSpacer(height = 4)
 
 
-            if(viewModel.actionState == ActionState.SERVER_CREATED){
+            if (viewModel.actionState == ActionState.SERVER_CREATED) {
 
-                if(!dialogVisibilityState) {
+                if (!dialogVisibilityState) {
                     Card(shape = CircleShape, backgroundColor = Color.White) {
                         IconButton(onClick = { dialogVisibilityState = true }) {
                             Icon(
