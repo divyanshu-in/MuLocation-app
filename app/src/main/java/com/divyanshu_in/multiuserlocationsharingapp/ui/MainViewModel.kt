@@ -22,6 +22,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Polygon
 import com.google.android.gms.maps.model.VisibleRegion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,6 +55,10 @@ class MainViewModel: ViewModel(){
 
     var stateOfShareableMarkers by mutableStateOf( listOf<MarkerDetails>())
 
+    var stateOfPolygons = mutableStateOf(listOf<LatLng>())
+
+
+
     var stateOfMessagesReceived by mutableStateOf(listOf<Pair<String, String>>())
 
     var stateOfMarkerPositions by mutableStateOf(mapOf<String, LocationData>())
@@ -76,7 +81,7 @@ class MainViewModel: ViewModel(){
         val colorHue = Random().nextInt(360).toFloat()
         val markerId = UUID.randomUUID().toString()
 
-        val markerDetails = MarkerDetails(markerId, "", colorHue, pos.latitude, pos.longitude)
+        val markerDetails = MarkerDetails(markerId, "", colorHue, pos.latitude, pos.longitude, order = stateOfShareableMarkers.size + 1)
 
         val mutableListOfMarkers = stateOfShareableMarkers.toMutableList().also {
             it.add(markerDetails)
@@ -84,7 +89,17 @@ class MainViewModel: ViewModel(){
         stateOfShareableMarkers = mutableListOfMarkers
 
         sendMarkerDetails(markerDetails)
+        generatePolygons()
     }
+
+    private fun generatePolygons(){
+        val polygonState = stateOfShareableMarkers.sortedBy { it.order }.map { LatLng(it.lat, it.long) }
+        val newList = stateOfPolygons.value.toMutableList()
+        newList.clear()
+        newList.addAll(polygonState)
+        stateOfPolygons.value = newList
+    }
+
 
     fun sendMarkerDetails(markerDetails: MarkerDetails){
         if(isConnected){

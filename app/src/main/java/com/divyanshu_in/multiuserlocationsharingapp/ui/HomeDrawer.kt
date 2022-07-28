@@ -1,12 +1,7 @@
 package com.divyanshu_in.multiuserlocationsharingapp.ui
 
 import android.app.Activity
-import android.content.Context
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CutCornerShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -38,20 +33,12 @@ fun HomeDrawer(viewModel: MainViewModel, context: Activity, serverId: String?, o
 
     }, drawerState = drawerState, content = {
         Box {
-            MapView(context, viewModel, serverId)
-            IconButton(onClick = {
+            MapView(context, viewModel, serverId) {
                 scope.launch {
                     drawerState.open()
-                } },
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .background(
-                        shape = CutCornerShape(topEndPercent = 50, bottomEndPercent = 50),
-                        color = Color.White))
-            {
-                Icon(imageVector = Icons.Filled.KeyboardArrowRight, contentDescription = "")
+                }
             }
         }
     }
-    , gesturesEnabled = gestureState)
+    , gesturesEnabled = gestureState, drawerBackgroundColor = Color.White)
 }

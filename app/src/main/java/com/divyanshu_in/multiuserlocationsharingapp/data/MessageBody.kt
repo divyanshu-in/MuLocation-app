@@ -19,7 +19,8 @@ data class MarkerDetails(
     val colorHue: Float,
     val lat: Double,
     val long: Double,
-    var action: MarkerAction = MarkerAction.ADD
+    var action: MarkerAction = MarkerAction.ADD,
+    var order: Int
 )
 
 enum class MessageType{

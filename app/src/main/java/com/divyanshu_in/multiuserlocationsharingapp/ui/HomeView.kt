@@ -5,8 +5,8 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Paint
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Share
@@ -33,6 +34,7 @@ import com.divyanshu_in.multiuserlocationsharingapp.MainActivity
 import com.divyanshu_in.multiuserlocationsharingapp.R
 import com.divyanshu_in.multiuserlocationsharingapp.data.ActionState
 import com.divyanshu_in.multiuserlocationsharingapp.data.MarkerDetails
+import com.divyanshu_in.multiuserlocationsharingapp.ui.theme.Colors
 import com.divyanshu_in.multiuserlocationsharingapp.utils.HorizontalSpacer
 import com.divyanshu_in.multiuserlocationsharingapp.utils.VerticalSpacer
 import com.divyanshu_in.multiuserlocationsharingapp.utils.copyTextToClipBoard
@@ -40,32 +42,31 @@ import com.divyanshu_in.multiuserlocationsharingapp.utils.shareLinkVia
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.*
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 
-val permissionList = arrayListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
-
+val permissionList = arrayListOf(Manifest.permission.ACCESS_FINE_LOCATION,
+    Manifest.permission.ACCESS_COARSE_LOCATION)
 
 @Composable
-fun HomeView(context: Activity, viewModel: MainViewModel, serverId: String?){
-    var rememberAlertDialogState by remember{ mutableStateOf(false)}
+fun HomeView(context: Activity, viewModel: MainViewModel, serverId: String?) {
+    var rememberAlertDialogState by remember { mutableStateOf(false) }
     HomeDrawer(viewModel = viewModel, context, serverId) {
         rememberAlertDialogState = true
     }
 
-    if (rememberAlertDialogState){
-        LeaveServerDialog(context){
+    if (rememberAlertDialogState) {
+        LeaveServerDialog(context) {
             rememberAlertDialogState = false
         }
     }
 }
 
 @Composable
-fun LeaveServerDialog(activity: Activity, onDismissRequest: () -> Unit){
+fun LeaveServerDialog(activity: Activity, onDismissRequest: () -> Unit) {
     AlertDialog(
         onDismissRequest = { onDismissRequest.invoke() },
         confirmButton = {
@@ -77,28 +78,27 @@ fun LeaveServerDialog(activity: Activity, onDismissRequest: () -> Unit){
             }) {
                 Text(text = "Confirm")
             }
-    },
+        },
         dismissButton = {
             Button(onClick = {
                 onDismissRequest.invoke()
             }) {
                 Text(text = "Cancel")
             }
-        }
-    ,
+        },
         title = {
-                Text(text = "Want To Leave Server?", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Want To Leave Server?", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }, text = {
+            Text(text = "You can join server again, using the link shared to you!, even if you are admin.",
+                color = Color.Gray)
         }
-    , text ={
-            Text(text = "You can join server again, using the link shared to you!, even if you are admin.", color = Color.Gray)
-        } 
     )
 }
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
+fun MapView(context: Context, viewModel: MainViewModel, serverId: String?, onMenuButtonClick: () -> Unit) {
 
     serverId?.let {
         viewModel.actionState = ActionState.SERVER_JOINED
@@ -106,17 +106,17 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
 
     val permissionState = rememberMultiplePermissionsState(permissions = permissionList)
 
-    LaunchedEffect(key1 = permissionState.allPermissionsGranted){
-        if(!permissionState.allPermissionsGranted){
+    LaunchedEffect(key1 = permissionState.allPermissionsGranted) {
+        if (!permissionState.allPermissionsGranted) {
             permissionState.launchMultiplePermissionRequest()
         }
     }
 
-    val cameraPositionState = rememberCameraPositionState{
+    val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 20f)
     }
 
-    LaunchedEffect(key1 = cameraPositionState.position){
+    LaunchedEffect(key1 = cameraPositionState.position) {
         launch {
             val visibleRegion = cameraPositionState.projection?.visibleRegion
             viewModel.getDirectionOfMarker(visibleRegion)
@@ -125,25 +125,25 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
 
     var isMovedOnLastKnownLocation by remember { mutableStateOf(false) }
 
-    LaunchedEffect(key1 = viewModel.userLocationState){
-        if(!isMovedOnLastKnownLocation){
+    LaunchedEffect(key1 = viewModel.userLocationState) {
+        if (!isMovedOnLastKnownLocation) {
             cameraPositionState.move(CameraUpdateFactory.newLatLng(viewModel.userLocationState))
             isMovedOnLastKnownLocation = true
         }
     }
 
-    LaunchedEffect(key1 = permissionState.allPermissionsGranted){
-        if(permissionState.allPermissionsGranted){
+    LaunchedEffect(key1 = permissionState.allPermissionsGranted) {
+        if (permissionState.allPermissionsGranted) {
             viewModel.addLocationChangeListener(context)
-        }else{
+        } else {
             Toast.makeText(context, "Grant All Permissions First!", Toast.LENGTH_SHORT).show()
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        var markerDetailsState: MarkerDetails? by remember{ mutableStateOf(null) }
-        var markerActionDialogVisibilityState by remember{ mutableStateOf(false) }
+        var markerDetailsState: MarkerDetails? by remember { mutableStateOf(null) }
+        var markerActionDialogVisibilityState by remember { mutableStateOf(false) }
 
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
@@ -153,17 +153,31 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
             onMapLongClick = { loc ->
                 viewModel.addShareableMarker(loc)
             }
-        ){
+        ) {
+
+            if (viewModel.stateOfPolygons.value.isNotEmpty()) {
+                viewModel.stateOfPolygons.value.mapIndexed { index, latLng ->
+                    "$index lat - ${latLng.latitude} long - ${latLng.longitude}"
+                }.also {
+                    Timber.e(it.toString())
+                }
+                Polyline(points = viewModel.stateOfPolygons.value, color = Colors.orange, jointType = JointType.ROUND, width = 20f, startCap = RoundCap(), endCap = RoundCap())
+            }
 
             viewModel.stateOfMarkerPositions.forEach { userLocObject ->
                 val markerState = rememberMarkerState(position = userLocObject.value.latLng)
-                Marker(state = markerState , title = userLocObject.key, icon = BitmapDescriptorFactory.defaultMarker(userLocObject.value.colorHue))
+                Marker(state = markerState,
+                    title = userLocObject.key,
+                    icon = BitmapDescriptorFactory.defaultMarker(userLocObject.value.colorHue))
             }
 
-            viewModel.stateOfShareableMarkers.forEach { markerDetails ->
-                val markerState = rememberMarkerState(position = LatLng(markerDetails.lat, markerDetails.long))
+            val coroutineScope = rememberCoroutineScope()
 
-                var markerInfoVisibilityState by remember{ mutableStateOf(true)}
+            viewModel.stateOfShareableMarkers.forEach { markerDetails ->
+                val markerState =
+                    rememberMarkerState(position = LatLng(markerDetails.lat, markerDetails.long))
+
+//                markerS
 
                 MarkerInfoWindow(onInfoWindowClick = {
                     markerDetailsState = markerDetails
@@ -171,18 +185,26 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
                     it.hideInfoWindow()
                 }, draggable = true, visible = true,
                     state = markerState,
-                    icon = BitmapDescriptorFactory.defaultMarker(markerDetails.colorHue), onClick = {
+                    icon = BitmapHelper.getNumberedMarker(context,
+                        markerDetails.order,
+                        markerDetails.colorHue), onClick = {
                         return@MarkerInfoWindow false
-                    }){
-                    Card(backgroundColor = Color.White, modifier = Modifier.padding(top = 12.dp, start = 12.dp, end = 12.dp)) {
+                    }) {
+                    Card(backgroundColor = Color.White,
+                        modifier = Modifier.padding(top = 12.dp, start = 12.dp, end = 12.dp)) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(markerDetails.title)
                             HorizontalSpacer(2)
-                            Text(text = "tap for more options", fontStyle = FontStyle.Italic, color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
+                            Text(text = "tap for more options",
+                                fontStyle = FontStyle.Italic,
+                                color = Color.Gray,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(8.dp))
                         }
                     }
                 }
             }
+
         }
 
 
@@ -191,54 +213,53 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
             .align(Alignment.BottomEnd)
             .padding(12.dp)) {
 
-            val stateOfOutOfBoundMarkers by derivedStateOf { viewModel.stateOfMarkerPositions.filter{!it.value.isVisible} }
+            val stateOfOutOfBoundMarkers by derivedStateOf { viewModel.stateOfMarkerPositions.filter { !it.value.isVisible } }
 
             stateOfOutOfBoundMarkers.forEach { locationOfUser ->
                 FloatingActionButton(
                     onClick = {
-                              cameraPositionState.move(CameraUpdateFactory.newLatLng(locationOfUser.value.latLng))
+                        cameraPositionState.move(CameraUpdateFactory.newLatLng(locationOfUser.value.latLng))
                     },
                     backgroundColor = locationOfUser.value.color,
                     modifier = Modifier.rotate((locationOfUser.value.angleFromAxis!!)))
-                    {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "")
-                            locationOfUser.value.distance?.let {
-                                Text(it)
-                            }
+                {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "")
+                        locationOfUser.value.distance?.let {
+                            Text(it)
                         }
+                    }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
             }
         }
 
-        when(viewModel.actionState){
-            ActionState.DEFAULT -> {
-                ButtonGroup(context, modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 16.dp), viewModel)
-
+        var dialogVisibilityState by remember { mutableStateOf(true) }
+        if (dialogVisibilityState && viewModel.actionState == ActionState.SERVER_CREATED) {
+            Dialog(onDismissRequest = { dialogVisibilityState = false }) {
+                GetLinkRow(context, modifier = Modifier.align(Alignment.Center), viewModel)
             }
-            ActionState.SERVER_JOINED -> {
-                if(permissionState.allPermissionsGranted){
-                    viewModel.joinWebSocketFromDeepLink(serverId!!)
-                }else{
-                    LaunchedEffect(key1 = true){
-                        permissionState.launchMultiplePermissionRequest()
-                    }
+        }
+
+        Column(modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
+            Card(shape = CircleShape, backgroundColor = Color.White) {
+                IconButton(onClick = {
+                    onMenuButtonClick()
+                }) {
+                    Icon(
+                        imageVector = Icons.Filled.Menu,
+                        contentDescription = "Menu"
+                    )
                 }
             }
-            ActionState.SERVER_CREATED -> {
+            VerticalSpacer(height = 4)
 
-                var dialogVisibilityState by remember{ mutableStateOf(true) }
-                if(dialogVisibilityState){
-                    Dialog(onDismissRequest = { dialogVisibilityState = false }) {
-                        GetLinkRow(context, modifier = Modifier.align(Alignment.Center), viewModel)
-                    }
-                }else{
-                    VerticalSpacer(height = 80)
-                    Card(shape = CircleShape, modifier = Modifier.padding(16.dp)){
-                        IconButton(onClick = {dialogVisibilityState = true}) {
+
+            if(viewModel.actionState == ActionState.SERVER_CREATED){
+
+                if(!dialogVisibilityState) {
+                    Card(shape = CircleShape, backgroundColor = Color.White) {
+                        IconButton(onClick = { dialogVisibilityState = true }) {
                             Icon(
                                 painterResource(R.drawable.ic_round_link),
                                 contentDescription = "Show Link"
@@ -247,9 +268,28 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
                     }
                 }
             }
+
         }
 
-        if(markerActionDialogVisibilityState){
+        when (viewModel.actionState) {
+            ActionState.DEFAULT -> {
+                ButtonGroup(context, modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp), viewModel)
+
+            }
+            ActionState.SERVER_JOINED -> {
+                if (permissionState.allPermissionsGranted) {
+                    viewModel.joinWebSocketFromDeepLink(serverId!!)
+                } else {
+                    LaunchedEffect(key1 = true) {
+                        permissionState.launchMultiplePermissionRequest()
+                    }
+                }
+            }
+        }
+
+        if (markerActionDialogVisibilityState) {
             markerDetailsState?.let {
                 Dialog(onDismissRequest = { markerActionDialogVisibilityState = false }) {
                     MarkerActionDialog(viewModel = viewModel, markerDetails = it) {
@@ -263,13 +303,17 @@ fun MapView(context: Context, viewModel: MainViewModel, serverId: String?) {
 
 
 @Composable
-fun MarkerActionDialog(viewModel: MainViewModel, markerDetails: MarkerDetails, dismissDialogCallback: () -> Unit){
+fun MarkerActionDialog(
+    viewModel: MainViewModel,
+    markerDetails: MarkerDetails,
+    dismissDialogCallback: () -> Unit,
+) {
     Card(modifier = Modifier.padding(16.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = "Edit Title", color = Color.Gray)
             VerticalSpacer(height = 2)
-            var textState by remember{mutableStateOf(markerDetails.title)}
-            TextField(value = textState, onValueChange = {textState = it})
+            var textState by remember { mutableStateOf(markerDetails.title) }
+            TextField(value = textState, onValueChange = { textState = it })
             VerticalSpacer(height = 8)
             Row() {
                 IconButton(
@@ -281,7 +325,9 @@ fun MarkerActionDialog(viewModel: MainViewModel, markerDetails: MarkerDetails, d
                         dismissDialogCallback.invoke()
                     }
                 ) {
-                    Icon(imageVector = Icons.Rounded.Done, contentDescription = null, tint = Color.Green)
+                    Icon(imageVector = Icons.Rounded.Done,
+                        contentDescription = null,
+                        tint = Color.Green)
                 }
 
                 IconButton(
@@ -289,7 +335,9 @@ fun MarkerActionDialog(viewModel: MainViewModel, markerDetails: MarkerDetails, d
                         viewModel.deleteMarker(markerDetails)
                         dismissDialogCallback.invoke()
                     }) {
-                    Icon(imageVector = Icons.Rounded.Delete, contentDescription = null, tint = Color.Red)
+                    Icon(imageVector = Icons.Rounded.Delete,
+                        contentDescription = null,
+                        tint = Color.Red)
                 }
             }
         }
@@ -298,31 +346,28 @@ fun MarkerActionDialog(viewModel: MainViewModel, markerDetails: MarkerDetails, d
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun ButtonGroup(context: Context, modifier: Modifier, viewModel: MainViewModel){
+fun ButtonGroup(context: Context, modifier: Modifier, viewModel: MainViewModel) {
     val permissionState = rememberMultiplePermissionsState(permissions = permissionList)
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
 
-//        FloatingActionButton(onClick = {
-//        }, shape = RoundedCornerShape(16.dp)){
-//            Text(text = "Join Server", modifier = Modifier.padding(16.dp, 8.dp, 16.dp, 8.dp))
-//        }
-//        Spacer(modifier = Modifier.height(16.dp))
         FloatingActionButton(onClick = {
-            if(permissionState.allPermissionsGranted){
+            if (permissionState.allPermissionsGranted) {
                 viewModel.generateServerLinkAndConnect(context)
                 viewModel.actionState = ActionState.SERVER_CREATED
-            }else{
+            } else {
                 permissionState.launchMultiplePermissionRequest()
             }
-        }, shape = RoundedCornerShape(16.dp)){
-            Text(text = "Create Server", modifier = Modifier.padding(16.dp, 8.dp, 16.dp, 8.dp))
+        }, shape = RoundedCornerShape(16.dp)) {
+            Text(text = "Create Server",
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(16.dp, 8.dp, 16.dp, 8.dp))
         }
     }
 }
 
 @Composable
-fun GetLinkRow(context: Context, modifier: Modifier, viewModel: MainViewModel){
+fun GetLinkRow(context: Context, modifier: Modifier, viewModel: MainViewModel) {
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Card(shape = RoundedCornerShape(8.dp)) {
@@ -333,11 +378,11 @@ fun GetLinkRow(context: Context, modifier: Modifier, viewModel: MainViewModel){
         }
         Spacer(modifier = Modifier.height(8.dp))
         Row {
-            Card(shape = CircleShape) {
+            Card(shape = CircleShape, backgroundColor = Color.White) {
 
                 IconButton(onClick = {
                     context.shareLinkVia(viewModel.sharableLinkState)
-                }, modifier = Modifier.background(Color.White)){
+                }) {
                     Icon(
                         Icons.Rounded.Share,
                         contentDescription = "Share"
@@ -345,10 +390,10 @@ fun GetLinkRow(context: Context, modifier: Modifier, viewModel: MainViewModel){
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Card(shape = CircleShape) {
+            Card(shape = CircleShape, backgroundColor = Color.White) {
                 IconButton(onClick = {
                     context.copyTextToClipBoard(viewModel.sharableLinkState)
-                }){
+                }) {
                     Icon(
                         painterResource(R.drawable.ic_round_assignment),
                         contentDescription = "Copy"

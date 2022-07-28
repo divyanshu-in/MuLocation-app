@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.divyanshu_in.multiuserlocationsharingapp.MainActivity
 import com.divyanshu_in.multiuserlocationsharingapp.data.ActionState
+import com.divyanshu_in.multiuserlocationsharingapp.ui.theme.Colors
 import com.divyanshu_in.multiuserlocationsharingapp.utils.VerticalSpacer
 
 @Composable
@@ -48,7 +49,7 @@ fun MessageColumn(viewModel: MainViewModel, onLeaveServerButtonClick: () -> Unit
                 onClick = {
                     onLeaveServerButtonClick.invoke()
                 },
-                colors = ButtonDefaults.buttonColors(Color.Red),
+                colors = ButtonDefaults.buttonColors(Colors.red),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 4.dp, end = 4.dp)) {
