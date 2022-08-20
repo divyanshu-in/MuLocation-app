@@ -177,14 +177,22 @@ fun MapView(
 
                 // polyline between user and first stop
 
-                Polyline(points = viewModel.stateOfUserPolyline.value,
+                Polyline(points = viewModel.stateOfUserToFirstStopPolyline.value,
                     color = Colors.green,
                     jointType = JointType.ROUND,
                     width = 20f,
                     startCap = RoundCap(),
                     endCap = RoundCap()
                 )
+            }
 
+            viewModel.listOfActiveUsersPolyline.value.forEach {
+                Polyline(
+                    points = it as List<LatLng>,
+                    startCap = RoundCap(),
+                    endCap = RoundCap(),
+                    color = Color(0xFF888888)
+                )
             }
 
             viewModel.stateOfMarkerPositions.forEach { userLocObject ->
@@ -194,13 +202,9 @@ fun MapView(
                     icon = BitmapDescriptorFactory.defaultMarker(userLocObject.value.colorHue))
             }
 
-            val coroutineScope = rememberCoroutineScope()
-
             viewModel.stateOfShareableMarkers.forEach { markerDetails ->
                 val markerState =
                     rememberMarkerState(position = LatLng(markerDetails.lat, markerDetails.long))
-
-//                markerS
 
                 MarkerInfoWindow(onInfoWindowClick = {
                     markerDetailsState = markerDetails

@@ -40,7 +40,8 @@ class MainViewModel : ViewModel() {
         stateOfShareableMarkers.sortedBy { it.order }.map { LatLng(it.lat, it.long) }
     }
 
-    val stateOfUserPolyline = derivedStateOf {
+    // state of polyline between co-ordinates of user loc and first stop
+    val stateOfUserToFirstStopPolyline = derivedStateOf {
         if (stopsPolylineState.value.isNotEmpty()) {
             listOf(userLocationState, stopsPolylineState.value.first())
         }else{
@@ -62,6 +63,25 @@ class MainViewModel : ViewModel() {
     var stateOfMessagesReceived by mutableStateOf(listOf<Pair<String, String>>())
 
     var stateOfMarkerPositions by mutableStateOf(mapOf<String, LocationData>())
+
+    // list of users for which polyline between this user and another user is active.
+    var activePolylineUsersList = mutableStateListOf<String>()
+
+    var listOfActiveUsersPolyline = derivedStateOf {
+        activePolylineUsersList.map {
+            listOf(stateOfMarkerPositions[it]?.latLng, userLocationState)
+        }.filter { !it.contains(null) }
+    }
+
+    fun activatePolyline(username: String){
+        activePolylineUsersList.add(username)
+        Timber.e(activePolylineUsersList.size.toString())
+        Timber.e(listOfActiveUsersPolyline.value.first().toString())
+    }
+
+    fun deactivatePolyline(username: String){
+        activePolylineUsersList.remove(username)
+    }
 
     fun generateServerLinkAndConnect(context: Context) {
         viewModelScope.launch {
@@ -359,7 +379,12 @@ class MainViewModel : ViewModel() {
         })
 
         stateOfShareableMarkers.toMutableList().also { mutableList ->
-            mutableList.removeIf { it.markerId == markerDetails.markerId }
+            mutableList.removeIf { it.order == markerDetails.order }
+            mutableList.forEachIndexed{ id, marker ->
+                if (marker.order > markerDetails.order){
+                    mutableList[id].order -= 1
+                }
+            }
             stateOfShareableMarkers = mutableList
         }
     }

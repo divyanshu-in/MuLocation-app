@@ -2,10 +2,8 @@ package com.divyanshu_in.multiuserlocationsharingapp.ui
 
 import android.app.Activity
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Icon
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,7 +25,7 @@ fun DrawerContentColumn(viewModel: MainViewModel, context: Activity, onLeaveServ
             Text("Users Onboard", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(
                 Alignment.CenterHorizontally))
             VerticalSpacer(height = 4)
-            MarkerList(viewModel = viewModel)
+            UsersInRoom(viewModel = viewModel)
             VerticalSpacer(height = 10)
             ListSeparator()
             VerticalSpacer(height = 18)
@@ -37,7 +35,9 @@ fun DrawerContentColumn(viewModel: MainViewModel, context: Activity, onLeaveServ
             MessageColumn(viewModel = viewModel, onLeaveServerButtonClick)
         }
     }else{
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(8.dp)) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier
+            .fillMaxSize()
+            .padding(8.dp)) {
             Text(text = "Options like chats, server details will appear here, once you create or join a server!",
                 fontStyle = FontStyle.Italic,
                 color = Color.Gray)
@@ -46,7 +46,7 @@ fun DrawerContentColumn(viewModel: MainViewModel, context: Activity, onLeaveServ
 }
 
 @Composable
-fun MarkerList(viewModel: MainViewModel){
+fun UsersInRoom(viewModel: MainViewModel){
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         if(viewModel.stateOfMarkerPositions.isEmpty()){
             CircularProgressIndicator()
@@ -54,15 +54,16 @@ fun MarkerList(viewModel: MainViewModel){
             Text("Waiting for users to join!", fontWeight = FontWeight.SemiBold, color = Color.Gray)
         }
         viewModel.stateOfMarkerPositions.forEach {
-            MarkerDetailsView(markerDetails = it)
+            UserDetailsView(markerDetails = it, viewModel)
             ListSeparator()
             VerticalSpacer(height = 2)
         }
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun MarkerDetailsView(markerDetails: Map.Entry<String, LocationData>){
+fun UserDetailsView(markerDetails: Map.Entry<String, LocationData>, viewModel: MainViewModel){
     Row(modifier = Modifier.fillMaxWidth()) {
         Icon(painterResource(id = R.drawable.ic_radio_button_filled), contentDescription = "", tint = markerDetails.value.color, modifier = Modifier.padding(2.dp))
         HorizontalSpacer(width = 4)
@@ -71,5 +72,18 @@ fun MarkerDetailsView(markerDetails: Map.Entry<String, LocationData>){
             VerticalSpacer(height = 2)
             Text(markerDetails.value.distance + " away", color = Color.Gray)
         }
+
+        var polylineState by remember {
+            mutableStateOf(false)
+        }
+
+        Card(backgroundColor = if(polylineState) Color.Green else Color.Gray, onClick = {
+            polylineState = !polylineState
+            if(polylineState) viewModel.activatePolyline(markerDetails.key) else viewModel.deactivatePolyline(markerDetails.key)
+        }) {
+            Text(text = "Follow", color = if(polylineState) Color.Gray else Color.Black)
+        }
+
     }
+
 }
